@@ -1,0 +1,9 @@
+# Genghistask
+
+Plugin to use genghistask in node-red
+
+## How to contribute
+
+ git clone https://github.com/GenghisTask/node-red.git nodered
+ sudo docker run --rm -d -p 1880:1880 -v `pwd`/node_red_data/:/data -v   `pwd`/node_red_data/node-red-contrib-cron-plus/:/data/node_modules/node-red-contrib-cron-plus/ -v   `pwd`/node_red_data/cronstrue/:/data/node_modules/cronstrue/ -v   `pwd`/nodered:/data/node_modules/nodered --name mynodered nodered/node-red
+

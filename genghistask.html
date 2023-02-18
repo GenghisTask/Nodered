@@ -1,0 +1,219 @@
+<script type="text/javascript">
+
+    function suggestionOnClick(button, url, input) {
+        button.addClass('disabled');
+        $.getJSON(url, function(data) {
+            button.removeClass('disabled');
+            input.autocomplete({
+                source:data || [],
+                minLength:0,
+                close: function( event, ui ) {
+                    input.autocomplete( "destroy" );
+                }
+            }).autocomplete("search","");
+        });
+    }
+    function treeListOnClick(button, url, input) {
+        button.addClass('disabled');
+        $.getJSON(url, function(data) {
+            //@TODO empty tree in case their is already a tree
+            const tree = treeList = $("<div>")
+            .css({height: "8em"})
+            .appendTo(input.parent())
+            .treeList({});
+            
+            tree.treeList("data", data.children);
+
+            tree.on('treelistselect', function(event, item) {
+                if (typeof(item.children) == "undefined") {
+                    const getName = (i) => i.depth===0 ? i.label : getName(i.parent) + "/" + i.label;
+                    input.val(getName(item));                        
+                }
+            });
+        });
+    }
+
+    function refreshWorkspace(button, url, input) {
+        button.addClass('disabled');
+        $.post(url, function(data) {
+            //@TODO check request ERROR
+            button.removeClass('disabled');
+            $('.need-workspace-lookedup').show();
+        });
+    }
+
+    function displayLookup(input) {
+        if (input.val()=="_ADD_") {
+            $('.need-workspace-selected').hide();
+            $('.need-workspace-lookedup').hide();
+        } else {
+            $('.need-workspace-selected').show();
+        }
+    }
+    
+    RED.nodes.registerType('genghistask',{
+        category: 'function',
+        color: '#a6bbcf',
+        defaults: {
+            name: {value:""},
+            workspace: {value:"", type:"genghistask-workspace"},
+            environment: {value:""},
+            script: {value:"",required:true}
+        },
+        inputs:1,
+        inputLabels: "env",
+        outputs:1,
+        outputLabels: ["exit code"],
+        icon: "file.png",
+        label: function() {
+            return this.name||"genghistask";
+        },
+        oneditprepare: function(test) {
+            const getUriParam = () => new URLSearchParams({
+                id: $('#node-input-workspace option[selected]').val(),
+                workspace: $('#node-input-workspace option[selected]').text(),
+                script: $('#node-input-script').val()
+            });
+
+            const autocompleteBehavior = {
+                "environment" : suggestionOnClick, 
+                "script" : treeListOnClick,
+                "workspace": refreshWorkspace
+            };
+
+            Object.keys(autocompleteBehavior).map((autocompleteEntity)=>{
+                const button = $("#node-input-" + autocompleteEntity + "-lookup");
+                const input = $("#node-input-" + autocompleteEntity);
+                const url = `genghistask-${autocompleteEntity}?`;
+                const behavior = autocompleteBehavior[autocompleteEntity];
+                try {
+                    input.autocomplete( "destroy" );
+                } catch(err) {
+                }
+                $(button).click(function() {return behavior(button, url + getUriParam(), input);});
+            });
+
+            const onChangeBehavior = {
+                "workspace": displayLookup
+            };
+
+            Object.keys(onChangeBehavior).map((autocompleteEntity)=>{
+                const input = $("#node-input-" + autocompleteEntity);
+                const behavior = onChangeBehavior[autocompleteEntity];
+                $(input).change(function() {return behavior(input);});
+                behavior(input);
+            });
+            var tabs = RED.tabs.create({
+                id: "node-config-genghistask-tabs",
+                onchange: function(tab) {
+                    const url = `genghistask-tab?tab_id=` + tab.id.split("genghistask-tab-std").pop() +'&'+ getUriParam();
+                    $("#node-config-genghistask-tabs-content").children().hide();
+                    $("#" + tab.id).show();
+                    $.get(url, function(data) {
+                        $('#' + tab.id).html($('<pre></pre>').html(data));
+                    });
+                }
+            });
+            const logAvailable = ["log", "out", "err"];
+            logAvailable.forEach(log=>tabs.addTab({
+                id: "genghistask-tab-std" + log,
+                label: this._("genghistask.std" + log)
+            }));
+
+
+            (function hackExistingTab() {
+                realone = $('#red-ui-tab-editor-tab-properties-link-button');
+                realone.css('visibility','hidden');
+                $("#genghistask-tabs-part").hide();
+                dummy = $('<a><i class="fa fa-cog"></i></a>');
+                dummy.click(function(){
+                    realone.trigger('click');
+                    $("#genghistask-main-form").show();
+                    $("#genghistask-tabs-part").hide();
+                    $('#red-ui-tab-editor-tab-properties span.red-ui-text-bidi-aware').text("Properties");
+                });
+                dummy.insertAfter(realone);
+
+                logAvailable.forEach(log=>{
+                    a = $("<a>"+log+"</a>");
+                    a.click(function(){
+                        realone.trigger('click');
+                        $("#genghistask-main-form").hide();
+                        $("#genghistask-tabs-part").show();
+                        tabs.activateTab("genghistask-tab-std" + log);
+                        $('#red-ui-tab-editor-tab-properties span.red-ui-text-bidi-aware').text(log);
+                    });
+                    realone.parent().append(a);
+                });
+                $("#node-config-genghistask-tabs").hide();
+            })();
+
+        },
+        button: {
+            onclick: function () {
+                $.ajax({
+                    url: "inject/" + this.id,
+                    type: "POST",
+                    success: function (resp) {  
+                        RED.notify(node._("inject.success"));
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        if (jqXHR.status == 404) {
+                            RED.notify(node._("common.notification.error", { message: node._("common.notification.errors.not-deployed") }), "error");
+                        } else if (jqXHR.status == 500) {
+                            RED.notify(node._("common.notification.error", { message: node._("inject.errors.failed") }), "error");
+                        } else if (jqXHR.status == 0) {
+                            RED.notify(node._("common.notification.error", { message: node._("common.notification.errors.no-response") }), "error");
+                        } else {
+                            RED.notify(node._("common.notification.error", { message: node._("common.notification.errors.unexpected", { status: jqXHR.status, message: textStatus }) }), "error");
+                        }
+                    }
+                });
+            }
+        },
+    });
+</script>
+
+
+
+<script type="text/html" data-template-name="genghistask">
+    <div id="genghistask-main-form">
+        <div class="form-row">
+            <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+            <input type="text" id="node-input-name" placeholder="Name">
+        </div>
+        <hr/>
+        <div class="form-row">
+            <label for="node-input-workspace"><i class="fa fa-tag"></i> Workspace</label>
+            <input type="text" id="node-input-workspace">
+            <a id="node-input-workspace-lookup" class="red-ui-button need-workspace-selected"><i id="node-input-workspace-lookup-icon" class="fa fa-refresh"></i></a>
+        </div>
+        <fieldset class="need-workspace-selected need-workspace-lookedup">
+            <div class="form-row">
+                <label for="node-input-environment"><i class="fa fa-tag"></i> Environment</label>
+                <input  style="width:62%;" type="text" id="node-input-environment">
+                <a id="node-input-environment-lookup" class="red-ui-button"><i id="node-input-environment-lookup-icon" class="fa fa-search"></i></a>
+            </div>
+            <div class="form-row">
+                <label for="node-input-script"><i class="fa fa-tag"></i> Execute</label>
+                <input  style="width:61%;" type="text" id="node-input-script">
+                <a id="node-input-script-lookup" class="red-ui-button"><i id="node-input-script-lookup-icon" class="fa fa-search"></i></a>
+            </div>
+        </fieldset>
+    </div>
+    <div id="genghistask-tabs-part">
+        <ul id="node-config-genghistask-tabs"></ul>
+        <div id="node-config-genghistask-tabs-content" style="min-height:150px;">
+            <div id="genghistask-tab-stdlog" style="display: none;">
+            </div>
+            <div id="genghistask-tab-stderr" style="display: none;">
+            </div>
+            <div id="genghistask-tab-stdout" style="display: none;">
+            </div>
+        </div>
+    </div>
+</script>
+
+<script type="text/html" data-help-name="genghistask">
+    <p>A simple node that converts the message payloads into all lower-case characters</p>
+</script>

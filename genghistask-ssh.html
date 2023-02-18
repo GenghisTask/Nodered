@@ -1,0 +1,47 @@
+<script type="text/javascript">
+    
+    RED.userSettings.add({
+        id:'genghistask-ssh-settings',
+        title: "Ssh",
+        get: function() {
+            var settingsPane = $("<div>",{id: 'red-ui-settings-tab-genghistask-ssh-settings', style: "height: 100%"});
+            settingsPane.append($("script[data-template-name='genghistask-ssh']").html());
+            $.getJSON("/genghistask-ssh", function(data) {
+                $('#node-input-ssh').val(data);
+            });
+            return settingsPane;
+        },
+        close: function() {},  // Called when the settings dialog is being closed
+        focus: function() {
+            RED.loader.start();
+            $.get("/genghistask-ssh", function(data) {
+                RED.loader.end();
+                $('#node-input-ssh-error').hide();
+                $('#node-input-ssh').show()
+                $('#node-input-ssh').val(data);
+            });
+        }
+    })
+    
+</script>
+
+
+<script type="text/html" data-template-name="genghistask-ssh">
+
+    <div class="red-ui-help">
+        <div class="red-ui-settings-row">
+            <label for="node-input-ssh"><i class="fa fa-tag"></i> Public key of nodered</label>
+            <input style="width:100%;display: none;" type="text" id="node-input-ssh">
+        </div>
+        <div class="red-ui-settings-row">
+            You should append this key to the <code>~/.ssh/authorized_keys</code> file on the serveur you want to execute tasks on
+        </div>
+        <div class="red-ui-settings-row">
+            You can also add this key to the <b>Settings > Repository > Deploy Keys  </b> in order to clone a protected git repository
+        </div>
+        <div class="red-ui-settings-row">
+            This key is currenly stored in the home directory of the user running the node-red server (usually <code>/usr/src/node-red/.ssh/</code>)
+        </div>
+    </div>
+    
+</script>

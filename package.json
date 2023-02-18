@@ -1,0 +1,29 @@
+{
+  "name": "@genghistask/node-red",
+  "version": "1.0.0",
+  "description": "Run a script from a repository",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GenghisTask/node-red.git"
+  },
+  "keywords": [
+    "crontab",
+    "scheduler",
+    "script",
+    "library",
+    "node-red"
+  ],
+  "author": "Pascal Noisette <netpascal0123@aol.com>",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/GenghisTask/node-red/issues"
+  },
+  "homepage": "https://genghistask.github.io/",
+  "node-red": {
+    "nodes": {
+      "genghistask": "genghistask.js",
+      "genghistask-ssh": "genghistask-ssh.js",
+      "genghistask-workspace": "genghistask-workspace.js"
+    }
+  }
+}

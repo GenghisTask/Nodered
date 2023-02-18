@@ -1,0 +1,8 @@
+{
+    "genghistask": {
+        "stdlog": "Log",
+        "stderr": "Errors",
+        "stdout": "Output",
+        "no-log-atm":"No log at the moment"
+    }
+}
