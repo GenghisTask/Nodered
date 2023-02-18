@@ -25,5 +25,9 @@
       "genghistask-ssh": "genghistask-ssh.js",
       "genghistask-workspace": "genghistask-workspace.js"
     }
+  },
+  "dependencies": {
+    "split": "^1.0.1",
+    "yaml": "^2.2.1"
   }
 }
