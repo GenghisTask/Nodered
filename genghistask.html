@@ -53,7 +53,7 @@
     
     RED.nodes.registerType('genghistask',{
         category: 'function',
-        color: '#a6bbcf',
+        color: '#a6bbcf',//@TODO same color as exec ?
         defaults: {
             name: {value:""},
             workspace: {value:"", type:"genghistask-workspace"},
@@ -66,13 +66,14 @@
         outputLabels: ["exit code"],
         icon: "file.png",
         label: function() {
-            return this.name||"genghistask";
+            return this.name||this.script||"genghistask";
         },
         oneditprepare: function(test) {
             const getUriParam = () => new URLSearchParams({
                 id: $('#node-input-workspace option[selected]').val(),
                 workspace: $('#node-input-workspace option[selected]').text(),
-                script: $('#node-input-script').val()
+                script: $('#node-input-script').val(),
+                nodeId: this.id
             });
 
             const autocompleteBehavior = {
@@ -110,11 +111,18 @@
                     $("#node-config-genghistask-tabs-content").children().hide();
                     $("#" + tab.id).show();
                     $.get(url, function(data) {
-                        $('#' + tab.id).html($('<pre></pre>').html(data));
+                        if (tab.id == "genghistask-tab-stdlog" && data && data.split) {
+                            const header = ['{"timestamp":"timestamp", "msg":"msg", "pid":"pid", "environment":"environment", "command":"command"}'];
+                            content = '<table class="red-ui-info-table">' + (header.concat(data.split("\n")).filter(row=>row).map(row=> "<tr>" + Object.entries(JSON.parse(header[0])).map(([col])=>`<td>${JSON.parse(row)[col]||""}</td>`).join("") + "</tr>").join(""))+'</table>';
+                        } else {
+                            content = $('<pre></pre>').html(data)
+                        }
+                        $('#' + tab.id).html(content);
                     });
                 }
             });
-            const logAvailable = ["log", "out", "err"];
+            //TODO script preview in yet an other tab
+            const logAvailable = ["log", "out", "err", "shell"];
             logAvailable.forEach(log=>tabs.addTab({
                 id: "genghistask-tab-std" + log,
                 label: this._("genghistask.std" + log)
@@ -123,8 +131,6 @@
 
             (function hackExistingTab() {
                 realone = $('#red-ui-tab-editor-tab-properties-link-button');
-                realone.css('visibility','hidden');
-                $("#genghistask-tabs-part").hide();
                 dummy = $('<a><i class="fa fa-cog"></i></a>');
                 dummy.click(function(){
                     realone.trigger('click');
@@ -145,6 +151,8 @@
                     });
                     realone.parent().append(a);
                 });
+                realone.css('visibility','hidden');
+                $("#genghistask-tabs-part").hide();
                 $("#node-config-genghistask-tabs").hide();
             })();
 
@@ -210,10 +218,50 @@
             </div>
             <div id="genghistask-tab-stdout" style="display: none;">
             </div>
+            <div id="genghistask-tab-stdshell" style="display: none;">
+            </div>
         </div>
     </div>
 </script>
 
 <script type="text/html" data-help-name="genghistask">
-    <p>A simple node that converts the message payloads into all lower-case characters</p>
+    <p>Exec a command or run a script file from a workspace.</p>
+
+
+    <h3>Parameters</h3>
+    Specify what must be executed and if it must be done remotely.
+            <dl class="message-properties">
+                <dt>Workspace <span class="property-type"><a href="#" onclick="RED.sidebar.help.show(this.innerHTML); return false;">genghistask-workspace</a></span></dt>
+                <dd>A git repository.</dd>
+                <dt>Environment <span class="property-type">string</span></dt>
+                <dd>A hostname to execute the task remotely. Connection may be secured with <a href="#" onclick="RED.userSettings.show('genghistask-ssh-settings'); return false;">ssh</a></dd>
+                <dt>Script <span class="property-type">string</span></dt>
+                <dd>A bash command or the path towards a script.</dd>
+                <dt>Name (optional) <span class="property-type">string</span></dt>
+                <dd>Customize node name.</dd>
+            </dl>
+
+    <h3>Optional inputs</h3>
+        <p>All message properties will be used as environment variable.</p>
+        <p></p>
+        <dl class="message-properties">
+            <dt>foo
+                <span class="property-type">string</span>
+            </dt>
+            <dd>Inject a message with the properties FOO, in order to export the bash environement variable FOO=bar, . </dd>
+        </dl>
+    
+     <h3>Outputs</h3>
+         The node will output only if the command exit with success.
+                 <dl class="message-properties">
+                     <dt>code <span class="property-type">string</span></dt>
+                     <dd>The execution command return value.</dd>
+                     <dt>...msg <span class="property-type">object</span></dt>
+                     <dd>All fields of the input are also echo back in the output</dd>
+                 </dl>
+    
+    <h3>References</h3>
+        <ul>
+            <li><a>Docs</a> https://genghistask.github.io/</li>
+        </ul>
 </script>

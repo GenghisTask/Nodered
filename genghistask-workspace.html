@@ -8,6 +8,9 @@
         },
         label: function() {
             return this.workspace;
+        },
+        oneditsave: function () {
+           $.post(`genghistask-workspace?id=${this.id}&workspace=${this.workspace}`);
         }
     });
     
@@ -19,4 +22,41 @@
         <label for="node-config-input-workspace"><i class="fa fa-bookmark"></i> Git url of a workspace</label>
         <input type="text" id="node-config-input-workspace">
     </div>
+</script>
+
+
+<script type="text/html" data-help-name="genghistask-workspace">
+
+    <p>Config node to store a git url corresponding to a workspace.</p>
+
+    <h3>Parameters</h3>
+    Specify the url of the git repository
+            <dl class="message-properties">
+                <dt>Git url <span class="property-type">string</span></dt>
+                <dd>A git repository. Connection may be secured with <a href="#" onclick="RED.userSettings.show('genghistask-ssh-settings'); return false;">ssh</a></dd>
+
+            </dl>
+
+    
+
+    <h3>Recommanded architecture of the git repository</h3>
+    <dl class="message-properties">
+        <dt>./shell/ 
+            <span class="property-type">folder</span>
+        </dt>
+        <dd>All files inside the shell folder will be suggested in the input autocomplete. The genghistask node will execute the selected file.</dd>
+        <dt>./environment/ssh/config 
+            <span class="property-type">file</span>
+        </dt>
+        <dd>All hostnames inside this sshconfig file will be suggested in the input autocomplete. The genghistask node will execute the command remotely using the config.</dd>
+        <dt>./environment/docker/docker-compose.yml
+            <span class="property-type">file</span>
+        </dt>
+        <dd>All hostnames inside this file will be suggested in the input autocomplete.  The genghistask node will execute the command inside an instance of the image</dd>
+    </dl>
+
+    <h3>References</h3>
+    <ul>
+        <li><a>Docs</a> https://genghistask.github.io/</li>
+    </ul>
 </script>

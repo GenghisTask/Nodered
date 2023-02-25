@@ -1,6 +1,9 @@
 const Context = require('./helper/context');
 const Workspace = require('./helper/workspace');
-const Ornament = require('./helper/ornament');
+const Ornament = require('./helper/decorator')(
+    require('./helper/status'),
+    require('./helper/logger')
+);
 
 module.exports = function(RED) {
 
@@ -13,15 +16,12 @@ module.exports = function(RED) {
         this.on("input", (msg, nodeSend, nodeDone) => {
             if (this.activeProcesses) {
                 this.activeProcesses.kill();
-                Ornament.kill(this);
+                Ornament.kill(this, workspace, msg);
                 return nodeDone();
             }
             workspace.getEnvironementById(config.environment).then((e)=>{
-                this.activeProcesses = workspace.launch(e.remote, config.script, msg);
-                Ornament.running(this);
-                if (!this.activeProcesses) {
-                    this.activeProcesses.kill();
-                }
+                this.activeProcesses = workspace.launch(e.remote, config.script, msg, this.id);
+                Ornament.running(this, workspace, msg, config.script);
                 this.activeProcesses.stdin.on('error', ( err )=> {
                     this.error(err.code, RED.util.cloneMessage(err));
                 });
@@ -30,7 +30,7 @@ module.exports = function(RED) {
                 });
                 this.activeProcesses.on('close',  (code, signal) => {
                     this.activeProcesses = false;
-                    Ornament.close(this, code);
+                    Ornament.close(this, workspace, msg, code);
                     if (code == 0) {
                         nodeSend([{code, ...msg}]);
                     }
@@ -49,7 +49,7 @@ module.exports = function(RED) {
                 this.activeProcesses.kill();
             }
             this.activeProcesses = false;
-            Ornament.reset(this);
+            Ornament.reset(this, workspace);
         });
     });
     RED.httpAdmin.get("/genghistask-environment", RED.auth.needsPermission('genghistask'), function(req,res) {
@@ -90,6 +90,10 @@ module.exports = function(RED) {
     });
     RED.httpAdmin.get("/genghistask-tab", RED.auth.needsPermission('genghistask'), function(req,res) {
         const workspace = new Workspace(context, req.query);
-        res.send(workspace.getLogFile(req.query.script, req.query.tab_id));
+        if (req.query.tab_id == "shell") {
+            res.setHeader('content-type', 'text/plain');
+            return workspace.getScriptStream(req.query.script, {}).pipe(res);
+        }
+        res.send(workspace.getLogFile(req.query.nodeId, req.query.tab_id));
     });
 }
