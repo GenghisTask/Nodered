@@ -14,6 +14,9 @@ module.exports = function(RED) {
         const workspace = new Workspace(context, RED.nodes.getNode(config.workspace));
 
         this.on("input", (msg, nodeSend, nodeDone) => {
+	    
+	        msg.WORKSPACE = workspace.getDirectory();
+
             if (this.activeProcesses) {
                 this.activeProcesses.kill();
                 Ornament.kill(this, workspace, msg);
@@ -92,7 +95,7 @@ module.exports = function(RED) {
         const workspace = new Workspace(context, req.query);
         if (req.query.tab_id == "shell") {
             res.setHeader('content-type', 'text/plain');
-            return workspace.getScriptStream(req.query.script, {}).pipe(res);
+            return workspace.getScriptStream(req.query.script, {WORKSPACE:workspace.getDirectory()}).pipe(res);
         }
         res.send(workspace.getLogFile(req.query.nodeId, req.query.tab_id));
     });

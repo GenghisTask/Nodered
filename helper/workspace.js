@@ -21,10 +21,30 @@ Workspace.prototype.clone = async function() {
     if (!fs.existsSync(parentDir)){
         fs.mkdirSync(parentDir, { recursive: true });
     }
+    if (!this.workspace.workspace) {
+        return
+    }
+    if (fs.existsSync(parentDir + "/" + this.workspace.id)){
+        /* cleanup if workspace url change for same id : delete workspace */
+        const currentRemote = execSync("git remote get-url origin", { cwd: parentDir + "/" + this.workspace.id}).toString().trim();
+        if (currentRemote != this.workspace.workspace) {
+            try {
+                /* check access to the futur remote before deleting the workspace of the old one */
+                execSync(`git remote set-url origin ${this.workspace.workspace}`, { cwd: parentDir + "/" + this.workspace.id});
+                execSync(`git ls-remote`, { cwd: parentDir + "/" + this.workspace.id});
+                /* delete workspace */
+                fs.rmSync(parentDir + "/" + this.workspace.id, {recursive: true});
+            } catch (e) {
+                /* rollback cleanup */
+                execSync(`git remote set-url origin ${currentRemote}`, { cwd: parentDir + "/" + this.workspace.id});
+            }
+        }
+    }
     if (!fs.existsSync(parentDir + "/" + this.workspace.id)){
-        await exec(`git clone ${this.workspace.workspace} ${this.workspace.id}`, { cwd: parentDir});
+        execSync(`git clone ${this.workspace.workspace} ${this.workspace.id}`, { cwd: parentDir});
     } else {
-        await exec("git pull", { cwd: parentDir + "/" + this.workspace.id});
+        /* update workspace */
+        execSync("git pull", { cwd: parentDir + "/" + this.workspace.id});
         /* prune log */
         exec(`find ${path.join(parentDir, this.workspace.id, 'log')}  -type f -exec  sed -ne':a;$p;N;11,$D;ba' -i {} \\;`).catch(e=>{});
     }
@@ -61,7 +81,7 @@ Workspace.prototype.getEnvironementById = async function (id) {
 Workspace.prototype.getUnixShebang = function(relativeScriptPath) {
     const filename = this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id+"/shell/"+relativeScriptPath);
     if (!fs.existsSync(filename)) {
-        return '/bin/bash';
+        return ' /bin/bash';
     }
     return (
         (new String(fs.readFileSync(filename)).match(/(^#!.*)/) || [])[1] || ''
@@ -75,7 +95,7 @@ Workspace.prototype.getScriptStream = function(relativeScriptPath, env) {
     if (fs.existsSync(filename)) {
         script = fs.readFileSync(filename)
     }
-    const declaredEnv = execSync('export -p', { env: env });
+    const declaredEnv = execSync('export -p', { env: env, cwd: env.WORKSPACE });
     return Readable.from(declaredEnv + script);
 }
 
@@ -87,12 +107,15 @@ Workspace.prototype.getLogFile = function(logname, suffix) {
     }
     return fs.readFileSync(logfile);
 }
+Workspace.prototype.getDirectory = function() {
+    return this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id);
+}
 
 Workspace.prototype.launch = function(remote, script, payload, logname) {
     //@TODO implement log.log to trace last execution date
     const logfile = this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id+"/log/");
     fs.mkdirSync(logfile + logname, { recursive: true });
-    const child = spawn("sh",["-c" , remote + this.getUnixShebang(script)], payload);
+    const child = spawn("sh",["-c" , remote + this.getUnixShebang(script)], {env:payload, cwd:payload.WORKSPACE});
     if (!child) {
         return false;
     }
