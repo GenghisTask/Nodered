@@ -15,7 +15,7 @@ module.exports = function(RED) {
 
         this.on("input", (msg, nodeSend, nodeDone) => {
 	    
-	        msg.WORKSPACE = workspace.getDirectory();
+	        Object.assign(msg, workspace.getDirectory());
 
             if (this.activeProcesses) {
                 this.activeProcesses.kill();
@@ -95,7 +95,7 @@ module.exports = function(RED) {
         const workspace = new Workspace(context, req.query);
         if (req.query.tab_id == "shell") {
             res.setHeader('content-type', 'text/plain');
-            return workspace.getScriptStream(req.query.script, {WORKSPACE:workspace.getDirectory()}).pipe(res);
+            return workspace.getScriptStream(req.query.script, workspace.getDirectory()).pipe(res);
         }
         res.send(workspace.getLogFile(req.query.nodeId, req.query.tab_id));
     });

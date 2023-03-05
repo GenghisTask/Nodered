@@ -108,7 +108,10 @@ Workspace.prototype.getLogFile = function(logname, suffix) {
     return fs.readFileSync(logfile);
 }
 Workspace.prototype.getDirectory = function() {
-    return this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id);
+    return {
+        WORKSPACE : this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id),
+        HOSTDIR: process.env.HOSTDIR
+    }
 }
 
 Workspace.prototype.launch = function(remote, script, payload, logname) {
