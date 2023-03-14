@@ -5,8 +5,8 @@ const exec = util.promisify(require('child_process').exec);
 const spawn = require('child_process').spawn;
 const execSync = require('child_process').execSync;
 const fsp = fs.promises;
-const Script = require('./script');
-const Environment = require('./environment');
+const script = require('./script');
+const environment = require('./environment');
 const stream = require("stream");
 const Readable = stream.Readable; 
 
@@ -21,7 +21,7 @@ Workspace.prototype.clone = async function() {
     if (!fs.existsSync(parentDir)){
         fs.mkdirSync(parentDir, { recursive: true });
     }
-    if (!this.workspace.workspace) {
+    if (!this.workspace.workspace || this.workspace.workspace == "undefined") {
         return
     }
     if (fs.existsSync(parentDir + "/" + this.workspace.id)){
@@ -55,22 +55,18 @@ Workspace.prototype.getCommandLine = function() {
 }
 
 Workspace.prototype.getScriptCollection = function() {
-    return Script.getFiles(this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id+"/shell"));
+    return script.parse(this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id));
 }
 
 Workspace.prototype.getEnvironementCollection = function () {
-    const sshconfig = this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id+"/environment/ssh/config");
-    const composeFile = this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id+"/environment/docker/docker-compose.yml");
-    const e = new Environment();
-    e.parseSshEnvironment(sshconfig);
-    e.parseDockerEnvironment(composeFile);
+
     //@TODO ansible ?
     //@TODO act ?
     //@TODO gitlab ?
     //@TODO parse psh yaml ?
     //@TODO Markefile target
 
-    return Promise.all(e.promises).then(() => e.result);
+    return Promise.resolve(environment.parse(this.context.getFilenameInUserDir("genghistaskdata/"+this.workspace.id)));
 }
 
 Workspace.prototype.getEnvironementById = async function (id) {

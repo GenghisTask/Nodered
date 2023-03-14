@@ -1,6 +1,6 @@
 {
   "name": "@genghistask/node-red",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Run a script from a repository",
   "repository": {
     "type": "git",
@@ -27,7 +27,6 @@
     }
   },
   "dependencies": {
-    "split": "^1.0.1",
     "yaml": "^2.2.1"
   }
 }

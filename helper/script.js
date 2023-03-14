@@ -13,7 +13,18 @@ async function getFiles(dir) {
     return {value:dir, label:basename(dir), children: files.reduce((a, f) => a.concat(f), [])};
 }
 
+const parsers = [
+    async function (dir) {
+        if (!fs.existsSync(dir + "/shell")) {
+            return [];
+        }
+        return (await getFiles(dir + "/shell")).children;
+    }
+];
 
 module.exports = {
-    getFiles: getFiles
+    parse: async (dir) => {return {value:dir, label:basename(dir), children:  [].concat.apply([], await Promise.all(parsers.map(async (parser) => {
+        const children = await parser(dir);
+        return children;
+    })))}}
 };

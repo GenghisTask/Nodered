@@ -1,8 +1,8 @@
 const Context = require('./helper/context');
 const Workspace = require('./helper/workspace');
 const Ornament = require('./helper/decorator')(
-    require('./helper/status'),
-    require('./helper/logger')
+    require('./helper/decorator/status'),
+    require('./helper/decorator/logger')
 );
 
 module.exports = function(RED) {
@@ -15,7 +15,7 @@ module.exports = function(RED) {
 
         this.on("input", (msg, nodeSend, nodeDone) => {
 	    
-	        Object.assign(msg, workspace.getDirectory());
+	        msg = Object.assign(workspace.getDirectory(), msg);
 
             if (this.activeProcesses) {
                 this.activeProcesses.kill();
