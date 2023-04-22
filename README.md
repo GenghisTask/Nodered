@@ -52,6 +52,12 @@ docker exec -uroot mynodered addgroup node-red docker
 docker restart mynodered
 ```
 
+When the gid of docker is already in use, you can first shift the gid of the concerning group.
+```
+docker exec -uroot nodered apk add shadow
+docker exec -uroot nodered groupmod -g 1001 ping
+```
+
 Cron
 ==========
 
